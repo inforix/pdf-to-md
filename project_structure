@@ -1,0 +1,22 @@
+pdf2md/
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   └── cache.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── pdf_service.py
+│   │   └── ocr_service.py
+│   └── api/
+│       ├── __init__.py
+│       └── routes.py
+├── docs/
+│   └── task.md
+├── tests/
+│   └── __init__.py
+├── Dockerfile
+├── docker-compose.yml
+└── requirements.txt 
