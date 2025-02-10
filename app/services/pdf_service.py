@@ -23,9 +23,9 @@ class PDFService:
         self.md_writer = FileBasedDataWriter(str(self.output_dir))
 
     @staticmethod
-    def _generate_cache_key(content: bytes) -> str:
+    def _generate_cache_key(content: bytes, convert_image: bool) -> str:
         # Combine content and convert_image flag to create unique cache key
-        return hashlib.md5(content).hexdigest()
+        return hashlib.md5(content).hexdigest() + str(convert_image)
 
     @staticmethod
     def _download_pdf(url: str) -> bytes:
@@ -74,13 +74,13 @@ class PDFService:
         # Replace all image references with image + extracted text
         return re.sub(image_pattern, replace_image, markdown_content)
 
-    def process_pdf(self, content: bytes, needs_ocr: bool = False) -> str:
-        cache_key = self._generate_cache_key(content)
+    def process_pdf(self, content: bytes, convert_image: bool = False) -> str:
+        cache_key = self._generate_cache_key(content, convert_image)
         
         # Check cache first
         cached_result = get_cache(cache_key)
-        # if cached_result:
-        #     return cached_result
+        if cached_result:
+            return cached_result
 
         # Create temporary file
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
@@ -92,8 +92,7 @@ class PDFService:
             ds = PymuDocDataset(content)
             
             # Determine if OCR is needed if not explicitly specified
-            if not needs_ocr:
-                needs_ocr = ds.classify() == SupportedPdfParseMethod.OCR
+            needs_ocr = ds.classify() == SupportedPdfParseMethod.OCR
             
             # Process the PDF
             infer_result = ds.apply(doc_analyze, ocr=needs_ocr)
@@ -115,7 +114,8 @@ class PDFService:
             markdown_content = markdown_path.read_text()
             
             # Process images in the markdown content
-            markdown_content = self._process_image_in_markdown(markdown_content)
+            if convert_image:
+                markdown_content = self._process_image_in_markdown(markdown_content)
             
             # Cache the result
             set_cache(cache_key, markdown_content)

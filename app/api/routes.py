@@ -1,23 +1,23 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from typing import Optional
 from app.services.pdf_service import PDFService
 
 router = APIRouter()
 pdf_service = PDFService()
 
-@router.post("/convert/")
+@router.post("/convert")
 async def convert_pdf(
     file: Optional[UploadFile] = File(None),
-    url: Optional[str] = None,
-    needs_ocr: bool = True,
+    url: Optional[str] = Form(None),
+    convert_image: bool = Form(False),
 ):
     try:
-        print(f"needs_ocr: {needs_ocr}")
+        print(f"convert_image: {convert_image}")
         if file:
             content = await file.read()
-            return {"markdown": pdf_service.process_pdf(content, needs_ocr)}
+            return {"markdown": pdf_service.process_pdf(content, convert_image)}
         elif url:
-            return {"markdown": pdf_service.process_pdf_url(url, needs_ocr)}
+            return {"markdown": pdf_service.process_pdf_url(url, convert_image)}
         else:
             raise HTTPException(
                 status_code=400,
