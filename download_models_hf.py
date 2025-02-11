@@ -7,9 +7,9 @@ from huggingface_hub import snapshot_download
 
 def download_json(url):
     # 下载JSON文件
-    response = requests.get(url)
-    response.raise_for_status()  # 检查请求是否成功
-    return response.json()
+    #response = requests.get(url)
+    #response.raise_for_status()  # 检查请求是否成功
+    return json.load(open(url))
 
 
 def download_and_modify_json(url, local_filename, modifications):
@@ -31,7 +31,7 @@ def download_and_modify_json(url, local_filename, modifications):
 
 
 if __name__ == '__main__':
-
+    
     mineru_patterns = [
         "models/Layout/LayoutLMv3/*",
         "models/Layout/YOLO/*",
@@ -52,7 +52,8 @@ if __name__ == '__main__':
     print(f'model_dir is: {model_dir}')
     print(f'layoutreader_model_dir is: {layoutreader_model_dir}')
 
-    json_url = 'https://github.com/opendatalab/MinerU/raw/master/magic-pdf.template.json'
+    #json_url = 'https://github.com/opendatalab/MinerU/raw/master/magic-pdf.template.json'
+    json_url = 'magic-pdf.template.json'
     config_file_name = 'magic-pdf.json'
     home_dir = os.path.expanduser('~')
     config_file = os.path.join(home_dir, config_file_name)

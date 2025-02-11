@@ -5,5 +5,4 @@ redis
 requests
 python-dotenv
 pydantic-settings
-magic-pdf[full]
 huggingface_hub 
