@@ -3,6 +3,13 @@ version: '3.8'
 services:
   web:
     build: .
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     ports:
       - "8086:8000"
     depends_on:
@@ -10,9 +17,13 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - NVIDIA_VISIBLE_DEVICES=all
+      - MINERU_DEVICE=cuda
+      - CUDA_VISIBLE_DEVICES=0
+    runtime: nvidia
 
   redis:
-    image: redis:alpine
+    image: harbor.shmtu.edu.cn/library/redis:alpine
     volumes:
       - ./redis_data:/data
     command: redis-server --appendonly yes
