@@ -13,7 +13,7 @@ pip install -r requirements.txt
 If you want to use GPU, please modify `device-mode` to `gpu` in `magic-pdf.template.json`:
 
 ```json
-"device-mode":"gpu",
+"device-mode":"cuda",
 ```
 
 ## Build image
