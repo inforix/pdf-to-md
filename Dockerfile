@@ -1,4 +1,5 @@
-FROM harbor.shmtu.edu.cn/nvidia/cuda:12.0.0-cudnn8-devel-ubuntu22.04
+FROM harbor.shmtu.edu.cn/nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
+# DO NOT USE 12.0.0, IT IS NOT SUPPORTED BY PADDLEPADDLE
 
 ARG VENV_NAME="pdftomd"
 ARG HTTPS_PROXY
@@ -28,7 +29,7 @@ RUN apt-get update && apt-get install -y \
 # conda install and conda forge channel as default
 # ------------------------------------------------------------------
 # Install miniforge
-RUN https_proxy=${HTTPS_PROXY} wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O ~/miniforge.sh && \
+RUN https_proxy=${HTTPS_PROXY} wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O ~/miniforge.sh && \
     /bin/bash ~/miniforge.sh -b -p /opt/conda && \
     rm ~/miniforge.sh && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
@@ -57,16 +58,16 @@ RUN conda activate ${VENV} && conda install -y -c conda-forge pynini==2.1.5
 COPY requirements.txt .
 
 RUN conda activate ${VENV} && \
-    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-    pip install --no-cache-dir -r requirements.txt \
-    pip install -U magic-pdf[full] --extra-index-url https://wheels.myhloli.com \
-    pip install paddlepaddle-gpu==2.6.2.post120 -i https://www.paddlepaddle.org.cn/packages/stable/cu120/
+    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install -U magic-pdf[full] --extra-index-url https://wheels.myhloli.com && \
+    pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
 
 COPY . .
 
 ENV HF_HOME=./hf/
 
 # Download MinerU models
-RUN HTTPS_PROXY=${HTTPS_PROXY} python download_models_hf.py
+RUN conda activate ${VENV} && HTTPS_PROXY=${HTTPS_PROXY} python download_models_hf.py
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

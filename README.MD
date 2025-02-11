@@ -21,5 +21,6 @@ If you want to use GPU, please modify `device-mode` to `gpu` in `magic-pdf.templ
 If you need proxy, then specify the `--build-arg`, or just ignore it.
 
 ```shell
-sudo docker compose build --build-arg HTTPS_PROXY=xxxx
+sudo docker compose build --build-arg HTTPS_PROXY=http://xxxx
+# DO NOT FORGET ADD http:// to your proxy string
 ```
