@@ -1,6 +1,16 @@
 # PDF to Markdown service
 
-This project is to build a FastAPI server to handle request for converting PDF to markdown content.
+This project is to build a FastAPI server to handle request for converting PDF to markdown content and processing images with OCR.
+
+## Features
+
+- Convert PDF files to markdown
+- Process images (JPG, PNG, etc.) with OCR to extract text
+- Automatically detect file types based on extensions
+- Support for both file uploads and URL-based processing
+- Option to extract and process images embedded in PDFs
+
+For detailed feature documentation, see [Features Documentation](docs/features.md).
 
 ## Installation
 

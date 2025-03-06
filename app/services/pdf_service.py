@@ -33,6 +33,12 @@ class PDFService:
         response.raise_for_status()
         return response.content
 
+    @staticmethod
+    def _is_image_file(filename: str) -> bool:
+        """Check if the filename has an image extension."""
+        image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
+        return any(filename.lower().endswith(ext) for ext in image_extensions)
+
     def _process_image_in_markdown(self, markdown_content: str) -> str:
         """Process images in markdown content and extract text using MinerU."""
         # Regular expression to find markdown image syntax
@@ -73,6 +79,35 @@ class PDFService:
         
         # Replace all image references with image + extracted text
         return re.sub(image_pattern, replace_image, markdown_content)
+
+    def process_image(self, content: bytes) -> str:
+        """Process an image file directly using OCR."""
+        # Create a temporary file for the image
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+            tmp_file.write(content)
+            tmp_path = tmp_file.name
+        
+        try:
+            # Process image with MinerU
+            ds = read_local_images(tmp_path)[0]
+            infer_result = ds.apply(doc_analyze, ocr=True)
+            pipe_result = infer_result.pipe_ocr_mode(self.image_writer)
+            
+            # Generate a unique name for this conversion
+            name = hashlib.md5(content).hexdigest()[:8]
+            
+            # Dump markdown
+            pipe_result.dump_md(self.md_writer, f"{name}.md", "images")
+            
+            # Read the generated markdown file
+            markdown_path = self.output_dir / f"{name}.md"
+            markdown_content = markdown_path.read_text()
+            
+            return markdown_content
+            
+        finally:
+            # Clean up temporary files
+            Path(tmp_path).unlink()
 
     def process_pdf(self, content: bytes, convert_image: bool = False) -> str:
         cache_key = self._generate_cache_key(content, convert_image)
@@ -126,6 +161,11 @@ class PDFService:
             # Clean up temporary files
             Path(tmp_path).unlink()
             
-    def process_pdf_url(self, url: str, needs_ocr: bool = False) -> str:
-        content = self._download_pdf(url)
-        return self.process_pdf(content, needs_ocr) 
+    def process_pdf_url(self, url: str, convert_image: bool = False) -> str:
+        # Check if URL points to an image
+        if self._is_image_file(url):
+            content = self._download_pdf(url)  # Reusing the download method
+            return self.process_image(content)
+        else:
+            content = self._download_pdf(url)
+            return self.process_pdf(content, convert_image) 

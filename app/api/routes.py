@@ -15,7 +15,11 @@ async def convert_pdf(
         print(f"convert_image: {convert_image}")
         if file:
             content = await file.read()
-            return {"markdown": pdf_service.process_pdf(content, convert_image)}
+            # Check if the uploaded file is an image
+            if pdf_service._is_image_file(file.filename):
+                return {"markdown": pdf_service.process_image(content)}
+            else:
+                return {"markdown": pdf_service.process_pdf(content, convert_image)}
         elif url:
             return {"markdown": pdf_service.process_pdf_url(url, convert_image)}
         else:
