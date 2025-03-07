@@ -24,14 +24,17 @@ RUN apt-get update && apt-get install -y \
 	libgomp1 \
 	libgl1 \
     libglib2.0-0 \
-	&& rm -rf /var/lib/apt/lists/*
+    libreoffice \
+    && rm -rf /var/lib/apt/lists/*
 # ==================================================================
 # conda install and conda forge channel as default
 # ------------------------------------------------------------------
 # Install miniforge
-RUN https_proxy=${HTTPS_PROXY} wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O ~/miniforge.sh && \
-    /bin/bash ~/miniforge.sh -b -p /opt/conda && \
-    rm ~/miniforge.sh && \
+# Before docker build, you need to download the miniforge installer from https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+#RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O ~/miniforge.sh && \
+COPY Miniforge3-Linux-x86_64.sh ./miniforge.sh
+RUN /bin/bash ./miniforge.sh -b -p /opt/conda && \
+    rm ./miniforge.sh && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo "source /opt/conda/etc/profile.d/conda.sh" >> /opt/nvidia/entrypoint.d/100.conda.sh && \
     echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
@@ -65,9 +68,10 @@ RUN conda activate ${VENV} && \
 
 COPY . .
 
+# Download MinerU models before build this docker image
 ENV HF_HOME=./hf/
 
 # Download MinerU models
-RUN conda activate ${VENV} && HTTPS_PROXY=${HTTPS_PROXY} python download_models_hf.py
+RUN conda activate ${VENV} && python download_models_hf.py
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
