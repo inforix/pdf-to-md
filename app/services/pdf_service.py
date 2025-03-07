@@ -1,4 +1,5 @@
 import hashlib
+import os
 import tempfile
 from pathlib import Path
 import requests
@@ -8,7 +9,7 @@ from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
 from magic_pdf.config.enums import SupportedPdfParseMethod
 from magic_pdf.data.data_reader_writer import FileBasedDataWriter
 from app.core.cache import get_cache, set_cache
-from magic_pdf.data.read_api import read_local_images
+from magic_pdf.data.read_api import read_local_images, read_local_office, read_local_pdf
 
 class PDFService:
     def __init__(self):
@@ -36,9 +37,15 @@ class PDFService:
     @staticmethod
     def _is_image_file(filename: str) -> bool:
         """Check if the filename has an image extension."""
-        image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
+        image_extensions = ['.jpg', '.jpeg', '.png']
         return any(filename.lower().endswith(ext) for ext in image_extensions)
-
+    
+    @staticmethod
+    def _is_office_file(filename: str) -> bool:
+        """Check if the filename has an office extension."""
+        office_extensions = ['.docx', '.doc', '.xls', '.xlsx', '.ppt', '.pptx']
+        return any(filename.lower().endswith(ext) for ext in office_extensions)
+    
     def _process_image_in_markdown(self, markdown_content: str) -> str:
         """Process images in markdown content and extract text using MinerU."""
         # Regular expression to find markdown image syntax
@@ -80,10 +87,12 @@ class PDFService:
         # Replace all image references with image + extracted text
         return re.sub(image_pattern, replace_image, markdown_content)
 
-    def process_image(self, content: bytes) -> str:
+    def process_image(self, content: bytes, filename: str) -> str:
         """Process an image file directly using OCR."""
+        # Get image extension from filename
+        suffix = os.path.splitext(filename)[1]
         # Create a temporary file for the image
-        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
             tmp_file.write(content)
             tmp_path = tmp_file.name
         
@@ -109,7 +118,7 @@ class PDFService:
             # Clean up temporary files
             Path(tmp_path).unlink()
 
-    def process_pdf(self, content: bytes, convert_image: bool = False) -> str:
+    def process_pdf(self, content: bytes, filename: str, convert_image: bool = False) -> str:
         cache_key = self._generate_cache_key(content, convert_image)
         
         # Check cache first
@@ -161,11 +170,75 @@ class PDFService:
             # Clean up temporary files
             Path(tmp_path).unlink()
             
-    def process_pdf_url(self, url: str, convert_image: bool = False) -> str:
+    def process_office(self, content: bytes, filename: str, convert_image: bool = False) -> str:
+        """Process an office file using LibreOffice."""
+        
+        # Get office extension from filename
+        suffix = os.path.splitext(filename)[1]
+        
+        # Create a temporary file for the office file
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
+            tmp_file.write(content)
+            tmp_path = tmp_file.name
+
+        cache_key = self._generate_cache_key(content, convert_image)
+        
+        # Check cache first
+        cached_result = get_cache(cache_key)
+        if cached_result:
+            return cached_result
+
+        # Convert office file to PDF
+        try:
+            # Create Dataset Instance
+            ds = read_local_office(tmp_path)[0]
+            
+            # Determine if OCR is needed if not explicitly specified
+            needs_ocr = ds.classify() == SupportedPdfParseMethod.OCR
+            
+            # Process the PDF
+            infer_result = ds.apply(doc_analyze, ocr=needs_ocr)
+            
+            # Apply appropriate pipeline
+            if needs_ocr:
+                pipe_result = infer_result.pipe_ocr_mode(self.image_writer)
+            else:
+                pipe_result = infer_result.pipe_txt_mode(self.image_writer)
+
+            # Generate a unique name for this conversion
+            name = cache_key[:8]
+            
+            # Dump markdown
+            pipe_result.dump_md(self.md_writer, f"{name}.md", "images")
+            
+            # Read the generated markdown file
+            markdown_path = self.output_dir / f"{name}.md"
+            markdown_content = markdown_path.read_text()
+            
+            # Process images in the markdown content
+            if convert_image:
+                markdown_content = self._process_image_in_markdown(markdown_content)
+            
+            # Cache the result
+            set_cache(cache_key, markdown_content)
+            
+            return markdown_content
+            
+        finally:
+            # Clean up temporary files
+            Path(tmp_path).unlink()
+            
+    
+    def process_url(self, url: str, convert_image: bool = False) -> str:
+        # Get filename from URL
+        filename = os.path.basename(url)
         # Check if URL points to an image
-        if self._is_image_file(url):
+        if self._is_image_file(filename):
             content = self._download_pdf(url)  # Reusing the download method
-            return self.process_image(content)
+            return self.process_image(content, filename)
+        elif self._is_office_file(filename):
+            content = self._download_pdf(url)
+            return self.process_office(content, filename)
         else:
             content = self._download_pdf(url)
             return self.process_pdf(content, convert_image) 
