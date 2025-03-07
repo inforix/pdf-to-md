@@ -6,3 +6,6 @@ requests
 python-dotenv
 pydantic-settings
 huggingface_hub 
+Pillow
+magic-pdf
+paddlepaddle-gpu
