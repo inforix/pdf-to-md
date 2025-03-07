@@ -9,7 +9,7 @@ from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
 from magic_pdf.config.enums import SupportedPdfParseMethod
 from magic_pdf.data.data_reader_writer import FileBasedDataWriter
 from app.core.cache import get_cache, set_cache
-from magic_pdf.data.read_api import read_local_images, read_local_office, read_local_pdf
+from magic_pdf.data.read_api import read_local_images, read_local_office
 
 class PDFService:
     def __init__(self):
